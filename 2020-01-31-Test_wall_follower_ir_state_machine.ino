@@ -46,6 +46,7 @@ int previous_right_distance = 0;
 const int trigPin2 = 2;
 const int echoPin2 = 3;
 float distance = 0;
+float distance2 = 0;
 float previous_distance = 0;
 int distance_lue2 = 0;
 
@@ -155,23 +156,35 @@ void take_action()
   char state_description[] = "";
   float d = 13;  //distance_min_detection en cm
   //note: dans les conditions tous les fright(1) sont remplacés par right (0) 
-  if(distance >= 10 && distance <= 23){
-     change_state(2);
+  //correction de distance2
+  distance2 = distance2 + 1;
+  if(distance >= 10 && distance <= 23 && distance2 >= 10 && distance2 <= 23){
+     change_state(1);
      v_robot(200,0);
-     Serial.println("12-25");
+     Serial.println("straight");
   }
-  else if(distance > 23 && distance < 35){
-    change_state(1);
+  else if(distance < 10 && distance2 < 10){
+    change_state(2);
     v_robot(0,-pi);
     Serial.println("Turn right");
   }
-//  else if(distance < 10 && regions[1] <= 12){
-//    change_state(4);
-//    v_robot(0,-pi);
-//    Serial.println("Turn right");
-//  }
-  else{
+  else if(distance > 23 && distance2 > 23){
     change_state(3);
+    v_robot(0,pi);
+    Serial.println("Turn left");
+  }
+  else if(distance > 10 && distance2 < 10){
+    change_state(2);
+    v_robot(0,-pi);
+    Serial.println("Turn right");
+  }
+  else if(distance < 10 && distance2 > 10){
+    change_state(3);
+    v_robot(0,pi);
+    Serial.println("Turn left");
+  }
+  else{
+    change_state(0);
     v_robot(0,0);
     Serial.println("Stop");
   }
@@ -223,29 +236,6 @@ int detection_arriere()
   return distance;
 }
 
-void goStraight()   //run both motors in the same direction
-{ 
-  // turn on motor A
-  digitalWrite(In1, HIGH);
-  digitalWrite(In2, LOW);
-  // set speed to 150 out 255
-  analogWrite(EnA, 128);
-  // turn on motor B
-  digitalWrite(In3, HIGH);
-  digitalWrite(In4, LOW);
-  // set speed to 150 out 255
-  analogWrite(EnB, 128);
-}
-
-void stopMoving()
-{
-  // now turn off motors
-  digitalWrite(In1, LOW);
-  digitalWrite(In2, LOW);  
-  digitalWrite(In3, LOW);
-  digitalWrite(In4, LOW);
-}
-
 //controle la vitesse linéaire et angulaire du robot (mm/s) et (rad/s)
 void v_robot(float linear_x, float angular_z)
 {
@@ -257,13 +247,6 @@ void v_robot(float linear_x, float angular_z)
   
   //calcul de la commande d'asservissement
   if(!(linear_x == 0 && angular_z == 0)){
-    
-//    if(elapsedTime > 0.010){
-//      error_yaw_rate = angular_z - (distance - previous_distance)*10/(elapsedTime*115);
-//    }
-//    else{
-//      error_yaw_rate = 0;
-//    }
     error_yaw_rate = angular_z - GyroZ*pi/180;
     pid_p = kp*error_yaw_rate;
     pid_i = pid_i + ki*error_yaw_rate;
@@ -286,17 +269,6 @@ void v_robot(float linear_x, float angular_z)
     corrected_command_Vleft = 0;
     corrected_command_Vright = 0;
   }
-  
-//  Serial.print("Vleft");
-//  Serial.print(corrected_command_Vleft);
-//  Serial.print(" / ");
-//  Serial.print("corrected_command_Vright");
-//  Serial.println(corrected_command_Vright);
-//  Serial.print("pid");
-//  Serial.println(pid);
-  
-//  int corrected_command_Vleft = (int) linear_x*VtoV - (angular_z*d*VtoV)/2;
-//  int corrected_command_Vright = (int) linear_x*VtoV + (angular_z*d*VtoV)/2;
   
   //Controle de la saturation
   if(corrected_command_Vleft > 255){
@@ -372,7 +344,9 @@ void loop()
   //lecture et conversion en cm
   distance = analogRead(A1); 
   distance = 0.0001*pow(distance,2) - 0.146*distance + 52.451;
-  Serial.println(distance);
+  distance2 = analogRead(A2); 
+  distance2 = 0.0001*pow(distance2,2) - 0.146*distance2 + 52.451;
+  Serial.println(distance2);
   take_action();
   
   previous_distance = distance;
